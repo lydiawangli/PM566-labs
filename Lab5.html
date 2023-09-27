@@ -299,6 +299,40 @@ Attaching package: 'dplyr'</code></pre>
 <span id="cb20-30"><a href="#cb20-30" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
 <span id="cb20-31"><a href="#cb20-31" aria-hidden="true" tabindex="-1"></a>  <span class="fu">addLegend</span>(<span class="st">"topright"</span>, <span class="at">colors =</span> <span class="fu">unique</span>(represent_stations<span class="sc">$</span>STATE), <span class="at">labels =</span> <span class="fu">unique</span>(represent_stations<span class="sc">$</span>STATE))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>temp_quantiles <span class="ot">&lt;-</span> <span class="fu">quantile</span>(dat<span class="sc">$</span>temp, <span class="at">probs =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>, <span class="dv">1</span>), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> dat <span class="sc">%&gt;%</span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">temp_level =</span> <span class="fu">case_when</span>(</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>    temp <span class="sc">&lt;</span> temp_quantiles[<span class="dv">2</span>] <span class="sc">~</span> <span class="st">"Low"</span>,</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>    temp <span class="sc">&gt;=</span> temp_quantiles[<span class="dv">2</span>] <span class="sc">&amp;</span> temp <span class="sc">&lt;</span> temp_quantiles[<span class="dv">3</span>] <span class="sc">~</span> <span class="st">"Mid"</span>,</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>    temp <span class="sc">&gt;=</span> temp_quantiles[<span class="dv">3</span>] <span class="sc">&amp;</span> temp <span class="sc">&lt;</span> temp_quantiles[<span class="dv">4</span>] <span class="sc">~</span> <span class="st">"High"</span>,</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>    temp <span class="sc">&gt;=</span> temp_quantiles[<span class="dv">4</span>] <span class="sc">~</span> <span class="st">"Very High"</span>,</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>    <span class="cn">TRUE</span> <span class="sc">~</span> <span class="st">"NA"</span></span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>summary_table <span class="ot">&lt;-</span> dat <span class="sc">%&gt;%</span></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(temp_level) <span class="sc">%&gt;%</span></span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">Num_States_Included =</span> <span class="fu">n_distinct</span>(STATE),</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_temp =</span> <span class="fu">mean</span>(temp, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_wind.sp =</span> <span class="fu">mean</span>(wind.sp, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_atm.press =</span> <span class="fu">mean</span>(atm.press, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(summary_table)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 4 × 5
+  temp_level Num_States_Included mean_temp mean_wind.sp mean_atm.press
+  &lt;chr&gt;                    &lt;int&gt;     &lt;dbl&gt;        &lt;dbl&gt;          &lt;dbl&gt;
+1 High                        48      25.5         2.45          1014.
+2 Low                         48      15.9         1.89          1016.
+3 Mid                         48      21.7         2.23          1015.
+4 Very High                   48      31.3         3.27          1013.</code></pre>
+</div>
+</div>
 
 </main>
 <!-- /main column -->
