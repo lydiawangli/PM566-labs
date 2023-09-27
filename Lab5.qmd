@@ -111,3 +111,38 @@ result <- median_station_per_state %>%
   arrange(STATE, lat) %>%
   slice(1)
 ```
+
+```{r}
+# Q3:
+library(dplyr)
+library(leaflet)
+
+state_midpt <- dat %>%
+  group_by(STATE) %>%
+  summarise(mid_lat = mean(lat), mid_lon = mean(lon))
+
+stations_distance <- dat %>%
+  left_join(state_midpt, by = "STATE") %>%
+  mutate(Distance_Midpoint = sqrt((lat - mid_lat)^2 + (lon - mid_lon)^2))
+
+closest_station <- stations_distance %>%
+  group_by(STATE) %>%
+  filter(Distance_Midpoint == min(Distance_Midpoint))
+
+represent_stations <- bind_rows(
+  median_station_per_state,
+  closest_station
+  )
+
+map <- leaflet(represent_stations) %>%
+  addTiles() %>%
+  addCircleMarkers(
+  lng = ~lon,
+  lat = ~lat,
+  color = ~factor(STATE),
+  label = ~paste(STATE, "<br>", USAFID),
+  radius = 4
+  ) %>%
+  addLegend("topright", colors = unique(represent_stations$STATE), labels = unique(represent_stations$STATE))
+```
+
