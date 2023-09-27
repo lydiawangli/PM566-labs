@@ -1,0 +1,96 @@
+---
+title: "Lab 5"
+format: html
+editor: visual
+---
+
+```{r}
+# Part 1:
+library(data.table)
+library(dtplyr)
+library(dplyr)
+
+download.file(
+  "https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz",
+  destfile = file.path("~", "Downloads", "met_all.gz"),
+  method   = "libcurl",
+  timeout  = 60
+)
+
+met <- data.table::fread(file.path("~", "Downloads", "met_all.gz"))
+
+met[met$elev==9999.0] <- NA
+summary(met$elev)
+
+met <- met[temp>-40]
+met2 <- met[order(temp)]
+head(met2)
+
+stations <- fread("ftp://ftp.ncdc.noaa.gov/pub/data/noaa/isd-history.csv")
+stations[, USAF := as.integer(USAF)]
+
+stations[, USAF   := fifelse(USAF == 999999, NA_integer_, USAF)]
+stations[, CTRY   := fifelse(CTRY == "", NA_character_, CTRY)]
+stations[, STATE  := fifelse(STATE == "", NA_character_, STATE)]
+
+stations <- unique(stations[, list(USAF, CTRY, STATE)])
+
+stations <- stations[!is.na(USAF)]
+
+stations[, n := 1:.N, by = .(USAF)]
+stations <- stations[n == 1,][, n := NULL]
+
+merge(
+  x = met,
+  y = stations,
+  by.x = "USAFID",
+  by.y = "USAF",
+  all.x = TRUE,
+  all.y = FALSE
+  ) %>% nrow()
+
+stations[, n := 1:.N, by = .(USAF)]
+stations <- stations[n == 1,][, n := NULL]
+
+dat <- merge(
+  x = met,      
+  y = stations, 
+  by.x  = "USAFID",
+  by.y  = "USAF", 
+  all.x = TRUE,      
+  all.y = FALSE
+  )
+
+head(dat[, list(USAFID, WBAN, STATE)], n = 5)
+
+```
+
+``` {r}
+# Q1:
+
+dat[, .(
+    temp_avg = mean(temp, na.rm=TRUE),
+    wind.sp_avg = mean(wind.sp, na.rm=TRUE),
+    atm.press_avg = mean(atm.press, na.rm = TRUE)
+    ),
+    by = STATE
+    ][order(STATE)] %>% head(n = 4)
+# AL, AR AZ
+
+median_temp <- quantile(met$temp, 0.5, na.rm = TRUE)
+# 23.5
+median_wind <- quantile(met$wind.sp, 0.5, na.rm = TRUE)
+# 2.1
+median_atm <- quantile(met$atm.press, 0.5, na.rm = TRUE)
+# 1014.1
+
+dat$diff_temp <- abs(dat$temp - median_temp)
+dat$diff_wind <- abs(dat$wind.sp - median_wind)
+dat$diff_atm <- abs(dat$atm.press - median_atm)
+
+dat$total_diff <- dat$diff_temp + dat$diff_wind + dat$diff_atm
+
+three_stations <- dat[order(dat$total_diff), ][1:3, ]
+# STATE: FL, LA, NC, temp are different among them
+
+```
