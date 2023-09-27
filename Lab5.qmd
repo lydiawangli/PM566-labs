@@ -94,3 +94,20 @@ three_stations <- dat[order(dat$total_diff), ][1:3, ]
 # STATE: FL, LA, NC, temp are different among them
 
 ```
+
+```{r}
+# Q2:
+library(dplyr)
+
+median_stations <- dat %>%
+  group_by(STATE) %>%
+  mutate(Euclidean_Dist = sqrt((lat - mean(lat))^2 + (lon - mean(lon))^2))
+
+median_station_per_state <- median_stations %>%
+  group_by(STATE) %>%
+  filter(Euclidean_Dist == median(Euclidean_Dist))
+
+result <- median_station_per_state %>%
+  arrange(STATE, lat) %>%
+  slice(1)
+```
