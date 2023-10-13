@@ -1,0 +1,165 @@
+---
+title: "Lab 4"
+author: "Lianyan Wang"
+format:
+  html:
+    embed-resources: true
+---
+
+```{r}
+#1 Read in the data
+
+if (!file.exists("met_all.gz"))
+  download.file(
+    url = "https://raw.githubusercontent.com/USCbiostats/data-science-data/master/02_met/met_all.gz",
+    destfile = "met_all.gz",
+    method   = "libcurl",
+    timeout  = 60
+    )
+met <- data.table::fread("met_all.gz")
+
+#2 Prepare Data
+
+met <- met[met$temp > -17][elev == 9999.0, elev := NA]
+
+summary(met$temp)
+
+library(data.table)
+met[,ymd := as.Date(paste(year, month, day, sep = '-'))]
+met[, table(week(ymd))]
+met_new<- met[week(ymd) == 31]
+met_new
+
+met_avg <- met[,.(
+  temp     = mean(temp,na.rm=TRUE),
+  rh       = mean(rh,na.rm=TRUE),
+  wind.sp  = mean(wind.sp,na.rm=TRUE),
+  vis.dist = mean(vis.dist,na.rm=TRUE),
+  dew.point = mean(dew.point,na.rm=TRUE),
+  lat      = mean(lat),
+  lon      = mean(lon), 
+  elev     = mean(elev,na.rm=TRUE)
+  ), by=c("USAFID", "day")]
+
+library(dplyr)
+
+library(dplyr)
+
+met_avg <- met_avg %>%
+  mutate(region = case_when(
+    lon < -98 & lat > 39.71 ~ "NW",
+    lon < -98 & lat <= 39.71 ~ "SW",
+    lon >= -98 & lat > 39.71 ~ "NE",
+    lon >= -98 & lat <= 39.71 ~ "SE",
+    TRUE ~ NA_character_
+  ))
+
+
+met_avg[, elev  := cut(
+  x      = elev,
+  breaks = c(0, 1000, 2000, 3000, Inf),
+  labels = c("low", "medium", "high", "very high"),
+  right  = FALSE
+  )]
+
+library(ggplot2)
+
+met_avg <- met_avg %>%
+  mutate(region = ifelse(lon < -98.00 & lat > 39.71, "NW", "SW", "NE", "SE"))
+
+#3 Wind speed and dew point
+
+met_avg <- met_avg %>%
+  filter(!is.na(region))
+
+ggplot(data = met_avg) +
+  geom_violin(mapping = aes(x = 1, y = wind.sp, color = region)) +
+  facet_wrap(~ region, nrow = 1)
+
+#4 Examine the association between dew point and wind speed by region
+
+ggplot(data = met_avg, aes(x = dew.point, y = wind.sp, color = region)) +
+  geom_jitter(width = 0.2, height = 0.2, na.rn = TRUE) +
+  stat_smooth(method = "lm", se = FALSE, formula = y ~ x, aes(group = region)) +
+  scale_color_brewer(palette = "Set1") + 
+  labs(
+  x = "Dew Point",
+  y = "Wind Speed",
+  title = "Association of Dew pt and Wind sp "
+  )+
+  theme_classic()
+
+#5 Create barplots of the weather stations by elevation category colored by region
+
+ggplot(data = met_avg, aes(x = elev, fill = region)) +
+  geom_bar(position = "dodge", na.rm = TRUE) +
+  scale_fill_brewer(palette = "Set1") +
+  labs(
+    x = "Elev",
+    y = "Weather Stations",
+    title = "Weather stations by elev"
+  )+
+  theme_classic()
+  
+
+#6 Examine mean dew point and wind speed by region with standard deviation error bars
+
+met_avg <- na.omit(met_avg)
+
+
+ggplot(met_avg, aes(x = region)) +
+  stat_summary(
+    aes(y = dew.point),
+    fun.data = mean_sdl,
+    geom = "errorbar",
+    position = position_dodge(width = 0.8), 
+    na.rm = TRUE,
+    width = 0.2, 
+    color = "blue"
+  ) +
+
+  stat_summary(
+    aes(y = wind.sp),
+    fun.data = mean_sdl,  
+    geom = "errorbar",  
+    position = position_dodge(width = 0.8),  
+    na.rm = TRUE,
+    width = 0.2,
+    color = "red"
+  ) +
+
+  labs(
+    x = "Region",
+    y = "Values",
+    title = "Mean and Standard Deviation (SD) Error Bars for Dew Point and Wind Speed by Region"
+  ) +
+
+  theme_minimal()
+
+#7 Make a map showing the spatial trend in relative humidity in the US
+
+met_avg <- met_avg[!is.na(met_avg$rh),]
+
+color_palette <- colorNumeric(
+  palette = "Y10rRd",
+  domain = met_avg$rh
+  )
+
+
+#8 Use a ggplot extension
+
+install.packages("gganimate")
+
+ggplot(met_avg, aes(x = elev, y = wind.sp)) +
+  geom_boxplot() +
+  transition_states(
+  elev,
+  transition_length = 2,
+  state_length = 1
+  ) +
+  enter_fade() +
+  exit_shrink() +
+  ease_aes('sine-in-out')
+
+```
+

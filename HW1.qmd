@@ -1,0 +1,191 @@
+---
+title: "HW1"
+format: html
+editor: visual
+---
+
+```{r}
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+
+#Step 1:
+library(data.table)
+
+file_path <- file.path("/Users/LydiaWangLi/Desktop/PM566R", "data_2002.csv")
+
+data <- read.csv(file_path)
+
+file_path <- file.path("/Users/LydiaWangLi/Desktop/PM566R", "data_2022.csv")
+
+data2 <- read.csv(file_path)
+
+data.table(data)
+
+data.table(data2)
+
+dim(data)
+
+dim(data2)
+
+head(data)
+
+head(data2)
+
+tail(data)
+
+tail(data2)
+
+str(data)
+
+str(data2)
+
+summary(data)
+
+summary(data2)
+
+mean(is.na(data))
+
+mean(is.na(data2))
+
+# Since only a small portion (<5%) of the data is missing, removing those rows might not significantly affect the analysis
+```
+
+```{r}
+# Step 2:
+library(dplyr)
+library(data.table)
+
+data <- data[!is.na("Site.ID")]
+
+data2 <- data2[!is.na("Site.ID")]
+
+install.packages("lubridate")
+
+library(lubridate)
+
+merge(
+  x = data,
+  y = data2,
+  by.x = "Site.ID",
+  by.y = "Site.ID",
+  all.x = TRUE,
+  all.y = FALSE
+  ) %>% nrow()
+
+setDT(data)
+
+data[, n := 1:.N, by = .(Site.ID)]
+data <- data[n == 1,][, n := NULL]
+
+setDT(data2)
+
+data2[, n := 1:.N, by = .(Site.ID)]
+data2 <- data2[n == 1,][, n := NULL]
+
+dat <- merge(
+  x = data,
+  y = data2,
+  by.x = "Site.ID",
+  by.y = "Site.ID",
+  all.x = TRUE,
+  all.y = FALSE
+)
+
+library(data.table)
+
+is.data.table(dat)
+
+dat <- as.data.table(dat)
+
+data[, Year := "2002"]
+data2[, Year := "2022"]
+dat <- rbind(data, data2)
+# Now the combined data has 270 observations, which is the correct amount of two datasets together
+
+dat <- rename(dat, c(
+  lat = SITE_LATITUDE,
+  lot = SITE_LONGITUDE,
+  PM2.5 = Daily.Mean.PM2.5.Concentration))
+```
+
+```{r}
+
+# Step 3:
+library(leaflet)
+
+
+dat$Color <- ifelse(dat$Year == 2002, "blue", "purple")
+
+map <- leaflet(dat) %>%
+    addCircleMarkers(
+        lng = ~lot,
+        lat = ~lat,
+        radius = 4,
+        color = ~Color
+    )
+
+map
+
+# We see more purple points than blue points, indicating more data points from 2022.
+
+```
+
+```{r}
+# Step 4:
+summary(dat$PM2.5)
+# So far we don't see any implausible values of PM2.5
+
+missing_pm25 <- sum(is.na(dat$PM2.5))
+
+cat("Count of missing PM2.5 values:", missing_pm25, "\n")
+# There is no missing values of PM2.5
+
+```
+
+```{r}
+# Step 5: 
+library(ggplot2)
+
+year_mean <- dat %>%
+  group_by(Year) %>%
+  summarize(Mean_PM2.5 = mean(PM2.5, na.rm = TRUE))
+
+ggplot(dat, aes(x = PM2.5, fill = factor(Year))) +
+  geom_histogram(binwidth = 1) +
+  labs(
+    x = "PM2.5 Concentration",
+    y = "Frequency",
+    title = "Histogram of PM2.5 Concentrations in CA"
+    ) +
+  scale_fill_discrete(name = "Year") +
+  theme_minimal() +
+  theme(legend.position = "top")
+# The histogram indicates that PM2.5 has decreased from 2002 to 2022 in California by state level
+
+ggplot(dat, aes(x = Year, y = PM2.5, group = COUNTY, color = COUNTY)) +
+  geom_line() +
+  labs(
+    x = "Year",
+    y = "PM2.5",
+    title = "Trend in PM2.5 by COUNTY",
+    color = "COUNTY"
+    ) +
+  theme_minimal() +
+  theme(legend.position = "top") 
+# The line plots indicate that some county has decreased in PM2.5 while some has increased in PM2.5
+
+dat_filter <- dat[dat$COUNTY == "Los Angeles", ]
+
+ggplot(dat_filter, aes(x = PM2.5, fill = factor(Year))) +
+  geom_histogram(binwidth = 1) +
+  facet_wrap(~Site.Name) + 
+  labs(
+    x = "PM2.5 Concentration",
+    y = "Frequency",
+    title = "Histogram of PM2.5 Concentrations by Site.Name (Los Angeles County)",
+    fill = "Year"
+    ) +
+  scale_fill_discrete(name = "Year") +
+  theme_minimal() +
+  theme(legend.position = "top")
+# The histograms indicate that some data of a specific year was missing, but from the available data we could tell that PM2.5 has decreased overall in Los Angeles County
+```

@@ -1,0 +1,107 @@
+---
+title: "Lab 6"
+format: html
+editor: visual
+---
+
+```{r}
+library(tidyverse)
+library(tidytext)
+library(data.table)
+library(ggplot2)
+library(dplyr)
+
+url <- "https://raw.githubusercontent.com/USCbiostats/data-science-data/master/00_mtsamples/mtsamples.csv"
+local_file_path <- "/Users/LydiaWangLi/Desktop/mtsamples.csv"
+download.file(url, destfile = local_file_path, method = "auto")
+
+if (file.exists(local_file_path)) {
+  cat("CSV file downloaded successfully.")
+} else {
+  cat("Failed to download the CSV file.")
+}
+
+data <- read.csv(local_file_path)
+
+# Q1:
+data %>%
+  count(medical_specialty, sort = TRUE)
+
+data %>%
+  unnest_tokens(token, medical_specialty) %>%
+  count(token, sort = TRUE)
+# there are 40 categories, and they're not related, overlapping, and not evenly distributed
+```
+
+```{r}
+# Q2:
+data %>%
+  unnest_tokens(token, transcription) %>%
+  count(token, sort = TRUE) %>%
+  top_n(20,n)
+# the first one is the, then and, was, it makes sense because they're the most often used words in English
+```
+
+```{r}
+# Q3:
+data %>%
+  unnest_tokens(word, transcription) %>%
+  anti_join(stop_words, by = c("word")) %>%
+  filter(!grepl("\\d", word)) %>%
+  count(word, sort = TRUE) %>%
+  top_n(10, n) %>%
+  ggplot(aes(n, fct_reorder(word, n))) + geom_col()
+# after removing stop words and numbers, the most frequent words make more sense now
+```
+
+```{r}
+# Q4: 
+data %>%
+  unnest_ngrams(ngram, transcription, n = 2) %>%
+  count(ngram, sort = TRUE) %>%
+  top_n(10, n)
+
+data %>%
+  unnest_ngrams(ngram, transcription, n = 3) %>%
+  count(ngram, sort = TRUE) %>%
+  top_n(10, n)
+```
+
+```{r}
+# Q5:
+data %>%
+  unnest_ngrams(ngram, transcription, n = 3) %>%
+  separate(ngram, into = c("word1", "word2", "word3"), sep = " ") %>%
+  select(word1, word2, word3) %>%
+  filter(word2 == "pain") %>%
+  count(word1, word3, sort = TRUE)
+```
+
+```{r}
+# Q6:
+data %>%
+  unnest_tokens(token, transcription, token = "words") %>%
+  anti_join(stop_words, by = c("token" = "word")) %>%
+  group_by(medical_specialty) %>%
+  count(token, sort = TRUE) %>%
+  top_n(1,n) 
+
+data %>%
+  unnest_tokens(token, transcription, token = "words") %>%
+  anti_join(stop_words, by = c("token" = "word")) %>%
+  group_by(medical_specialty) %>%
+  count(token, sort = TRUE) %>%
+  top_n(5,n)
+```
+
+```{r}
+# Q7: Which top 10 keywords appear the most?
+data %>%
+  unnest_tokens(word, keywords) %>%
+  anti_join(stop_words, by = c("word")) %>%
+  filter(!grepl("\\d", word)) %>%
+  count(word, sort = TRUE) %>%
+  top_n(10, n) %>%
+  ggplot(aes(n, fct_reorder(word, n))) + geom_col()
+
+```

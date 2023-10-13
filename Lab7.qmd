@@ -1,0 +1,28 @@
+---
+title: "Lab7"
+format: 
+  html:
+    embed-resources: true
+---
+
+```{r}
+library(httr)
+library(xml2)
+library(stringr)
+
+url <- "https://pubmed.ncbi.nlm.nih.gov/?term=sars-cov-2"
+
+website <- xml2::read_html(url)
+
+counts <- xml2::xml_find_first(website, '//*[@id="search-results"]')
+
+counts <- as.character(counts)
+
+stringr::str_extract(counts, "[REGEX FOR NUMBERS WITH COMMAS/DOTS]")
+
+
+
+
+
+```
+
