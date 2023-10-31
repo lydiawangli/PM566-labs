@@ -1,0 +1,141 @@
+---
+title: "Lab10"
+author: Lydia Wang
+format:
+  html:
+    embed-resources: true
+---
+
+```{r}
+library(RSQLite)
+library(DBI)
+
+con <- dbConnect(SQLite(), ":memory:")
+
+actor <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/actor.csv")
+rental <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/rental.csv")
+customer <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/customer.csv")
+payment <- read.csv("https://raw.githubusercontent.com/ivanceras/sakila/master/csv-sakila-db/payment_p2007_01.csv")
+
+
+dbWriteTable(con, "actor", actor)
+dbWriteTable(con, "rental", rental)
+dbWriteTable(con, "customer", customer)
+dbWriteTable(con, "payment", payment)
+
+dbListTables(con)
+
+result <- dbGetQuery(con, "PRAGMA table_info(actor)")
+
+print(result)
+
+#1:
+E1 <- dbGetQuery(con,
+"SELECT actor_id, first_name, last_name
+FROM actor
+ORDER BY last_name, first_name
+")
+nrow(E1)
+
+#2:
+E2 <- dbGetQuery(con,
+"SELECT actor_id, first_name, last_name
+FROM actor
+WHERE last_name IN ('WILLIAMS', 'DAVIS')
+")
+
+#3:
+E3 <- dbGetQuery(con,
+"SELECT DISTINCT customer_id
+FROM rental
+WHERE date(rental_date) = '2005-07-05'
+")
+
+#4.1:
+E4.1 <- dbGetQuery(con,
+"SELECT *
+FROM payment
+WHERE amount IN (1.99, 7.99, 9.99)
+")
+
+#4.2:
+E4.2 <- dbGetQuery(con,
+"SELECT *
+FROM payment
+WHERE amount > 5
+")
+
+#5:
+E5 <- dbGetQuery(con,
+"SELECT payment.payment_id, payment.amount, customer.customer_id
+FROM payment
+INNER JOIN customer ON payment.customer_id = customer.customer_id
+WHERE customer.last_name = 'DAVIS'
+")
+
+#6.1:
+E6.1 <- dbGetQuery(con,
+"SELECT COUNT(*) AS row_count
+FROM rental
+")
+
+#6.2:
+E6.2 <- dbGetQuery(con,
+"SELECT customer_id, COUNT(*) AS rental_count
+FROM rental
+GROUP BY customer_id
+")
+
+#6.3:
+E6.3 <- dbGetQuery(con,
+"SELECT customer_id, COUNT(*) AS rental_count
+FROM rental
+GROUP BY customer_id 
+ORDER BY rental_count DESC
+")
+
+#6.4:
+E6.4 <- dbGetQuery(con,
+"SELECT customer_id, COUNT(*) AS rental_count
+FROM rental
+GROUP BY customer_id 
+HAVING rental_count >= 40
+ORDER BY rental_count DESC
+")
+
+#7:
+E7 <- dbGetQuery(con,
+"SELECT 
+  MAX(amount) AS max_payment,
+  MIN(amount) AS min_payment,
+  AVG(amount) AS avg_payment,
+  SUM(amount) AS total_payment
+FROM payment
+")
+
+#7.1:
+E7.1 <- dbGetQuery(con,
+"SELECT customer_id,
+  MAX(amount) AS max_payment,
+  MIN(amount) AS min_payment,
+  AVG(amount) AS avg_payment,
+  SUM(amount) AS total_payment
+FROM payment
+GROUP BY customer_id
+")
+
+#7.2:
+E7.2 <- dbGetQuery(con,
+"SELECT customer_id,
+  MAX(amount) AS max_payment,
+  MIN(amount) AS min_payment,
+  AVG(amount) AS avg_payment,
+  SUM(amount) AS total_payment
+FROM payment
+GROUP BY customer_id
+HAVING COUNT(customer_id) > 5
+")
+
+dbDisconnect(con)
+```
+
